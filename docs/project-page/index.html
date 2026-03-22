@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GhostGPU — Wireless eGPU Bridge</title>
+<meta name="author" content="Leo Joachim Atienza">
+<meta name="description" content="GhostGPU — An open-source wireless eGPU bridge. Original concept by Leo Joachim Atienza.">
+<meta name="copyright" content="GhostGPU is an original concept by Leo Joachim Atienza. All rights reserved.">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #111118;
+    --bg-card-hover: #16161f;
+    --bg-elevated: #1a1a25;
+    --border: #2a2a3a;
+    --border-glow: #3b82f640;
+    --text-primary: #e8e8f0;
+    --text-secondary: #8888a0;
+    --text-muted: #555568;
+    --accent-blue: #3b82f6;
+    --accent-cyan: #06b6d4;
+    --accent-green: #10b981;
+    --accent-amber: #f59e0b;
+    --accent-red: #ef4444;
+    --accent-purple: #8b5cf6;
+    --gradient-hero: linear-gradient(135deg, #3b82f6 0%, #06b6d4 50%, #10b981 100%);
+    --gradient-text: linear-gradient(135deg, #60a5fa, #34d399);
+    --font-display: 'Outfit', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── Noise overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Grid background ── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 80px 80px;
+    opacity: 0.04;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ═══════════════════════════════════════ NAV ═══════════════════════════════════ */
+  nav {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 100;
+    background: #0a0a0fcc;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
+  }
+  nav .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .nav-logo {
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text-primary); }
+
+  /* ═══════════════════════════════════════ HERO ══════════════════════════════════ */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding-top: 80px;
+    position: relative;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 800px;
+    background: radial-gradient(circle, #3b82f610 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    border-radius: 100px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent-green);
+    box-shadow: 0 0 8px var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .hero h1 {
+    font-size: clamp(3rem, 7vw, 5.5rem);
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+    margin-bottom: 24px;
+  }
+  .hero h1 .gradient {
+    background: var(--gradient-hero);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline {
+    font-size: clamp(1.1rem, 2vw, 1.4rem);
+    color: var(--text-secondary);
+    font-weight: 300;
+    max-width: 600px;
+    margin-bottom: 48px;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    margin-top: 48px;
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-value {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    font-weight: 700;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .stat-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+  }
+
+  /* ═══════════════════════════════════════ SECTIONS ══════════════════════════════ */
+  section {
+    padding: 100px 0;
+  }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--accent-blue);
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 20px;
+  }
+
+  .section-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin-bottom: 56px;
+    font-weight: 300;
+  }
+
+  /* ── Cards ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--border-glow);
+    transform: translateY(-2px);
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gradient-hero);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 20px;
+  }
+  .card h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+  }
+  .card p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.65;
+  }
+
+  /* ── Architecture flow ── */
+  .arch-flow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 40px 0;
+  }
+  .arch-node {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    text-align: center;
+    min-width: 150px;
+    position: relative;
+  }
+  .arch-node .node-icon {
+    font-size: 1.8rem;
+    margin-bottom: 8px;
+  }
+  .arch-node .node-name {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+  .arch-node .node-detail {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+  .arch-arrow {
+    color: var(--accent-blue);
+    font-size: 1.5rem;
+    padding: 0 8px;
+    font-family: var(--font-mono);
+    flex-shrink: 0;
+  }
+  .arch-arrow-label {
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 0 4px;
+  }
+
+  /* ── Hardware table ── */
+  .hw-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .hw-table thead {
+    background: var(--bg-elevated);
+  }
+  .hw-table th {
+    padding: 16px 24px;
+    text-align: left;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .hw-table td {
+    padding: 16px 24px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #1a1a25;
+  }
+  .hw-table tr:last-child td { border-bottom: none; }
+  .hw-table tr:hover td { background: var(--bg-card-hover); }
+  .hw-table .mono {
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--accent-cyan);
+  }
+  .hw-total {
+    background: var(--bg-elevated) !important;
+    font-weight: 700;
+  }
+  .hw-total .mono { color: var(--accent-green) !important; font-weight: 700; }
+
+  /* ── Phase cards ── */
+  .phase-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .phase-card::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .phase-card.phase-1::after { background: var(--accent-green); }
+  .phase-card.phase-2::after { background: var(--accent-blue); }
+  .phase-card.phase-3::after { background: var(--accent-purple); }
+
+  .phase-num {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .phase-1 .phase-num { color: var(--accent-green); }
+  .phase-2 .phase-num { color: var(--accent-blue); }
+  .phase-3 .phase-num { color: var(--accent-purple); }
+
+  .phase-card h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+  .phase-card .desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    max-width: 700px;
+  }
+  .phase-meta {
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  .phase-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .phase-meta-label {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+  }
+  .phase-meta-value {
+    font-family: var(--font-mono);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .tag-recommended {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 100px;
+    background: #10b98118;
+    color: var(--accent-green);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin-left: 12px;
+  }
+
+  /* ── Code blocks ── */
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: var(--text-secondary);
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .code-block .cmd { color: var(--accent-cyan); }
+  .code-block .flag { color: var(--accent-amber); }
+  .code-block .comment { color: var(--text-muted); font-style: italic; }
+
+  /* ── Comparison table ── */
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .compare-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+  }
+  .compare-card h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .compare-card .limitation {
+    color: var(--accent-red);
+    font-size: 0.82rem;
+    font-family: var(--font-mono);
+    margin-bottom: 12px;
+  }
+  .compare-card p {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  /* ── Performance bars ── */
+  .perf-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .perf-label {
+    min-width: 180px;
+    font-size: 0.88rem;
+    font-weight: 500;
+  }
+  .perf-bar-track {
+    flex: 1;
+    height: 28px;
+    background: var(--bg-elevated);
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+  .perf-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 12px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    transition: width 1s ease-out;
+  }
+
+  /* ── Roadmap ── */
+  .roadmap {
+    position: relative;
+    padding-left: 32px;
+  }
+  .roadmap::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--accent-green), var(--accent-blue), var(--accent-purple));
+    border-radius: 2px;
+  }
+  .roadmap-item {
+    position: relative;
+    margin-bottom: 40px;
+  }
+  .roadmap-dot {
+    position: absolute;
+    left: -29px;
+    top: 6px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid var(--bg-deep);
+  }
+  .roadmap-item.near .roadmap-dot { background: var(--accent-green); box-shadow: 0 0 12px #10b98140; }
+  .roadmap-item.mid .roadmap-dot { background: var(--accent-blue); box-shadow: 0 0 12px #3b82f640; }
+  .roadmap-item.far .roadmap-dot { background: var(--accent-purple); box-shadow: 0 0 12px #8b5cf640; }
+  .roadmap-time {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .roadmap-item.near .roadmap-time { color: var(--accent-green); }
+  .roadmap-item.mid .roadmap-time { color: var(--accent-blue); }
+  .roadmap-item.far .roadmap-time { color: var(--accent-purple); }
+  .roadmap-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .roadmap-desc {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.6;
+  }
+
+  /* ── Quick start steps ── */
+  .steps {
+    counter-reset: step;
+  }
+  .step {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 28px;
+    align-items: flex-start;
+  }
+  .step-num {
+    counter-increment: step;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-cyan);
+  }
+  .step-content h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .step-content p {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+  }
+  .step-content code {
+    font-family: var(--font-mono);
+    background: var(--bg-elevated);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    color: var(--accent-cyan);
+  }
+
+  /* ── Footer ── */
+  footer {
+    padding: 60px 0;
+    border-top: 1px solid var(--border);
+    text-align: center;
+  }
+  footer p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+  footer a {
+    color: var(--accent-blue);
+    text-decoration: none;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .hero-stats { flex-direction: column; gap: 24px; }
+    .arch-flow { flex-direction: column; }
+    .arch-arrow { transform: rotate(90deg); }
+    .nav-links { display: none; }
+    .phase-card { padding: 28px; }
+    .perf-row { flex-direction: column; align-items: stretch; }
+    .perf-label { min-width: auto; }
+  }
+
+  /* ── Animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero > * {
+    animation: fadeUp 0.8s ease-out backwards;
+  }
+  .hero > *:nth-child(1) { animation-delay: 0.1s; }
+  .hero > *:nth-child(2) { animation-delay: 0.2s; }
+  .hero > *:nth-child(3) { animation-delay: 0.35s; }
+  .hero > *:nth-child(4) { animation-delay: 0.5s; }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  /* ── Watermark ── */
+  .watermark {
+    position: fixed;
+    bottom: 40px;
+    right: -28px;
+    font-family: var(--font-mono);
+    font-size: 0.58rem;
+    color: #ffffff06;
+    letter-spacing: 0.12em;
+    transform: rotate(-90deg);
+    transform-origin: right bottom;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+  }
+  .origin-mark {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+    opacity: 0.5;
+    margin-top: 16px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ NAV ═══════════════════════════ -->
+<nav>
+  <div class="container">
+    <div class="nav-logo">GhostGPU</div>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#hardware">Hardware</a>
+      <a href="#phases">Phases</a>
+      <a href="#performance">Performance</a>
+      <a href="#roadmap">Roadmap</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ══════════════════════════ -->
+<div class="hero">
+  <div class="badge"><span class="dot"></span> Open Source Project</div>
+  <h1><span class="gradient">GhostGPU</span></h1>
+  <p class="tagline">Your own private AI GPU. No cloud. No monthly fees. A wireless eGPU bridge powered by Raspberry Pi.</p>
+  <p style="font-family: var(--font-mono); font-size: 0.62rem; color: var(--text-muted); opacity: 0.4; letter-spacing: 0.08em;">A project by Leo Joachim Atienza</p>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-value">18–28</div>
+      <div class="stat-label">tokens / sec</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">&lt;1ms</div>
+      <div class="stat-label">Pi hop latency</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">~$280</div>
+      <div class="stat-label">total build cost</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ WHAT IS ═══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">01 — Introduction</div>
+    <h2>What is GhostGPU?</h2>
+    <p class="section-subtitle">
+      GhostGPU is an open-source wireless eGPU bridge system. It makes your laptop behave as if it has a local GPU — when in reality, the GPU lives on a separate machine connected over your home network.
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background: #3b82f618; color: var(--accent-blue);">🔗</div>
+        <h3>Raspberry Pi Bridge</h3>
+        <p>A Pi acts as the network gateway — receiving workloads from your laptop over Wi-Fi and forwarding them to the GPU over wired PCIe/Ethernet.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #10b98118; color: var(--accent-green);">🔒</div>
+        <h3>Complete Privacy</h3>
+        <p>Your data never leaves your network. No cloud uploads, no third-party servers, no subscriptions. Runs entirely on hardware you own.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #8b5cf618; color: var(--accent-purple);">⚡</div>
+        <h3>AI Inference Focus</h3>
+        <p>Designed for local LLM inference, image generation, ML training, and batch compute — not gaming. Optimized for throughput over frame latency.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ PROBLEM ═══════════════════════ -->
+<section id="problem">
+  <div class="container">
+    <div class="section-label">02 — The Problem</div>
+    <h2>Why GhostGPU exists</h2>
+    <p class="section-subtitle">
+      Millions of laptops and ultrabooks ship without a dedicated GPU. Cloud GPU services are expensive and require uploading private data to third-party servers. There's no affordable, private, open-source alternative — until now.
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background: #ef444418; color: var(--accent-red);">💸</div>
+        <h3>Cloud is Expensive</h3>
+        <p>Cloud GPU services cost $0.50–$3.00/hr. For students, hobbyists, and indie devs, those costs add up fast — often exceeding the cost of owning hardware outright.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #f59e0b18; color: var(--accent-amber);">🚫</div>
+        <h3>No Existing Appliance</h3>
+        <p>Solutions like SCUDA and rCUDA are pure software — they assume you already have server hardware. Nobody ships a dedicated Pi-based GPU bridge as a consumer product.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #06b6d418; color: var(--accent-cyan);">🏠</div>
+        <h3>Privacy Matters</h3>
+        <p>Uploading sensitive data, code, or documents to cloud GPU providers isn't always an option. GhostGPU keeps everything on your own network.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ ARCHITECTURE ══════════════════ -->
+<section id="architecture">
+  <div class="container">
+    <div class="section-label">03 — Architecture</div>
+    <h2>v2.0 — Wired Pi Edition</h2>
+    <p class="section-subtitle">
+      The signal path has exactly one wireless hop. Everything else is wired Gigabit Ethernet or direct PCIe. This eliminated the dual-wireless bottleneck from v1.0.
+    </p>
+
+    <div class="arch-flow">
+      <div class="arch-node">
+        <div class="node-icon">💻</div>
+        <div class="node-name">Laptop</div>
+        <div class="node-detail">Any OS</div>
+      </div>
+      <div class="arch-arrow-label">
+        <span style="color: var(--accent-amber);">→→→</span>
+        <span>Wi-Fi 5GHz</span>
+        <span style="color: var(--accent-amber); font-size: 0.55rem;">only wireless hop</span>
+      </div>
+      <div class="arch-node">
+        <div class="node-icon">📡</div>
+        <div class="node-name">Router</div>
+        <div class="node-detail">5GHz band</div>
+      </div>
+      <div class="arch-arrow-label">
+        <span style="color: var(--accent-green);">→→→</span>
+        <span>Gigabit ETH</span>
+        <span style="color: var(--accent-green); font-size: 0.55rem;">wired</span>
+      </div>
+      <div class="arch-node">
+        <div class="node-icon">🍓</div>
+        <div class="node-name">Raspberry Pi 5</div>
+        <div class="node-detail">Bridge gateway</div>
+      </div>
+      <div class="arch-arrow-label">
+        <span style="color: var(--accent-green);">→→→</span>
+        <span>PCIe / OCuLink</span>
+        <span style="color: var(--accent-green); font-size: 0.55rem;">wired</span>
+      </div>
+      <div class="arch-node">
+        <div class="node-icon">🎮</div>
+        <div class="node-name">AMD RX 580</div>
+        <div class="node-detail">8GB · gfx803</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="margin-top: 32px;">
+      <span class="comment"># Key design decision in v2.0</span><br>
+      <span class="comment"># v1.0: Laptop → Wi-Fi → Router → Wi-Fi → Pi (two wireless hops, 5–25ms jitter)</span><br>
+      <span class="comment"># v2.0: Laptop → Wi-Fi → Router → Ethernet → Pi (one wireless hop, &lt;1ms Pi hop)</span><br><br>
+      <span class="comment"># The Pi connects to the router via Ethernet, not Wi-Fi.</span><br>
+      <span class="comment"># This single change cut Pi-hop latency from 5–25ms to sub-1ms.</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ HARDWARE ══════════════════════ -->
+<section id="hardware">
+  <div class="container">
+    <div class="section-label">04 — Hardware</div>
+    <h2>Bill of Materials</h2>
+    <p class="section-subtitle">
+      Everything you need to build GhostGPU. Estimated total: ~$235–320 CAD. Most components available on Amazon, eBay, Newegg, CanaKit, or PiShop.us.
+    </p>
+
+    <table class="hw-table">
+      <thead>
+        <tr>
+          <th>Component</th>
+          <th>Spec</th>
+          <th>Est. Cost (CAD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>AMD RX 580 8GB</td>
+          <td class="mono">gfx803 Polaris · 8GB GDDR5</td>
+          <td class="mono">~$40–55</td>
+        </tr>
+        <tr>
+          <td>Raspberry Pi 5</td>
+          <td class="mono">4GB or 8GB RAM</td>
+          <td class="mono">~$75–95</td>
+        </tr>
+        <tr>
+          <td>Pineboards uPCIty Lite HAT</td>
+          <td class="mono">PCIe x4 open-ended slot</td>
+          <td class="mono">~$45</td>
+        </tr>
+        <tr>
+          <td>M.2 to OCuLink adapter</td>
+          <td class="mono">+ ReDriver if needed</td>
+          <td class="mono">~$20–30</td>
+        </tr>
+        <tr>
+          <td>ATX PSU</td>
+          <td class="mono">400W+ (used is fine)</td>
+          <td class="mono">~$25–40</td>
+        </tr>
+        <tr>
+          <td>MicroSD Card</td>
+          <td class="mono">32GB+ Class 10 / A2</td>
+          <td class="mono">~$10–20</td>
+        </tr>
+        <tr>
+          <td>Ethernet Cable</td>
+          <td class="mono">Cat5e or Cat6</td>
+          <td class="mono">~$5</td>
+        </tr>
+        <tr>
+          <td>Active Cooler</td>
+          <td class="mono">Official Pi 5 or Pimoroni</td>
+          <td class="mono">~$10</td>
+        </tr>
+        <tr>
+          <td>ATX 24-pin Jumper</td>
+          <td class="mono">Run PSU standalone</td>
+          <td class="mono">~$5</td>
+        </tr>
+        <tr class="hw-total">
+          <td colspan="2">Total estimated build cost</td>
+          <td class="mono">~$235–320</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ PHASES ════════════════════════ -->
+<section id="phases">
+  <div class="container">
+    <div class="section-label">05 — Implementation</div>
+    <h2>Three Phases</h2>
+    <p class="section-subtitle">
+      Ordered from simplest to most powerful. Start with Phase 1 to validate your hardware before investing time in Phase 2 or 3.
+    </p>
+
+    <div class="phase-card phase-1">
+      <div class="phase-num">Phase 1 <span class="tag-recommended">Recommended Start</span></div>
+      <h3>llama.cpp Server</h3>
+      <p class="desc">Run an AI model on the RX 580 over the network. Your laptop sends prompts via HTTP and receives outputs — no local GPU work. Uses ROCm with HIP backend for AMD GPU acceleration.</p>
+      <div class="phase-meta">
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Performance</span>
+          <span class="phase-meta-value">18–28 tok/s (Mistral 7B Q4)</span>
+        </div>
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Stack</span>
+          <span class="phase-meta-value">llama.cpp + ROCm 6.0.2 + HIP</span>
+        </div>
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Difficulty</span>
+          <span class="phase-meta-value" style="color: var(--accent-green);">Low</span>
+        </div>
+      </div>
+      <div class="code-block" style="margin-top: 20px;">
+        <span class="comment"># Build llama.cpp with AMD GPU support</span><br>
+        <span class="cmd">git clone</span> https://github.com/ggerganov/llama.cpp.git<br>
+        <span class="cmd">cd</span> llama.cpp && <span class="cmd">mkdir</span> build && <span class="cmd">cd</span> build<br>
+        <span class="cmd">cmake</span> .. <span class="flag">-DLLAMA_HIPBLAS=ON -DAMDGPU_TARGETS=gfx803</span><br>
+        <span class="cmd">cmake</span> --build .<br><br>
+        <span class="comment"># Start the server</span><br>
+        <span class="cmd">./bin/llama-server</span> <span class="flag">-m</span> ../models/mistral-7b-q4.gguf <span class="flag">--host</span> 0.0.0.0 <span class="flag">--port</span> 8080
+      </div>
+    </div>
+
+    <div class="phase-card phase-2">
+      <div class="phase-num">Phase 2</div>
+      <h3>ROCm Remote Execution</h3>
+      <p class="desc">Transparent GPU offloading using PyTorch + a gRPC/HTTP server on the Pi. Your laptop code stays the same — you just swap the forward pass to hit the Pi. Full tensor serialization over the network.</p>
+      <div class="phase-meta">
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Stack</span>
+          <span class="phase-meta-value">PyTorch + FastAPI + ROCm</span>
+        </div>
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Difficulty</span>
+          <span class="phase-meta-value" style="color: var(--accent-amber);">Medium</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-card phase-3">
+      <div class="phase-num">Phase 3</div>
+      <h3>Vulkan Compute (GPU-Agnostic Fallback)</h3>
+      <p class="desc">If ROCm proves unstable, Phase 3 uses Vulkan compute — which the RX 580 supports fully (Vulkan 1.2) — as a hardware-agnostic alternative. Uses Kompute + FastAPI. Works with any Vulkan-capable GPU.</p>
+      <div class="phase-meta">
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Stack</span>
+          <span class="phase-meta-value">Kompute + FastAPI + Vulkan 1.2</span>
+        </div>
+        <div class="phase-meta-item">
+          <span class="phase-meta-label">Difficulty</span>
+          <span class="phase-meta-value" style="color: var(--accent-red);">Hard</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ TECH DETAILS ══════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">06 — Technical Details</div>
+    <h2>Key Technical Notes</h2>
+    <p class="section-subtitle">Critical configuration details and design decisions that will save you hours of debugging.</p>
+
+    <div class="code-block">
+      <span class="comment"># ── Critical environment flags ──────────────────────────────</span><br>
+      <span class="cmd">export</span> <span class="flag">HSA_OVERRIDE_GFX_VERSION</span>=8.0.3<br>
+      <span class="cmd">export</span> <span class="flag">AMDGPU_TARGETS</span>="gfx803"<br><br>
+      <span class="comment"># ── ROCm version pinning (ESSENTIAL) ────────────────────────</span><br>
+      <span class="comment"># ROCm 6.1+ DROPPED Polaris (gfx803) support</span><br>
+      <span class="comment"># You MUST use ROCm 6.0.2 for the RX 580</span><br><br>
+      <span class="comment"># ── GPU verification ────────────────────────────────────────</span><br>
+      <span class="cmd">rocminfo</span> | grep -A5 'Agent 2'<br>
+      <span class="comment"># Should show: Name: gfx803  (this is the RX 580 identifier)</span><br><br>
+      <span class="comment"># ── Why AMD over NVIDIA? ────────────────────────────────────</span><br>
+      <span class="comment"># Open-source ARM driver compatibility on Raspberry Pi</span><br>
+      <span class="comment"># NVIDIA requires proprietary drivers — not viable on Pi's ARM SoC</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ PRIOR ART ═════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">07 — Prior Art</div>
+    <h2>How GhostGPU is Different</h2>
+    <p class="section-subtitle">
+      GhostGPU fills a specific gap: a dedicated, open-source, Pi-based hardware appliance for wireless GPU compute. Nobody else has shipped this as a consumer product.
+    </p>
+
+    <div class="compare-grid">
+      <div class="compare-card">
+        <h4>SCUDA</h4>
+        <div class="limitation">Pure software — no hardware appliance</div>
+        <p>Assumes you already have server hardware with a GPU. GhostGPU adds the dedicated Pi-based PCIe-to-network hardware gateway that SCUDA doesn't provide.</p>
+      </div>
+      <div class="compare-card">
+        <h4>rCUDA</h4>
+        <div class="limitation">CUDA-only — NVIDIA-only</div>
+        <p>Locked to NVIDIA's proprietary ecosystem. GhostGPU targets AMD GPUs with fully open-source drivers that work on ARM (Pi).</p>
+      </div>
+      <div class="compare-card">
+        <h4>VMware Bitfusion</h4>
+        <div class="limitation">Enterprise — proprietary &amp; expensive</div>
+        <p>Enterprise-grade GPU virtualization. Requires VMware licensing. GhostGPU is open-source and costs under $300 in hardware.</p>
+      </div>
+      <div class="compare-card">
+        <h4>Jeff Geerling's Pi eGPU</h4>
+        <div class="limitation">Proof of concept — not a product</div>
+        <p>Proved PCIe on Pi 5 is viable. GhostGPU builds on this foundation to create a complete networked GPU bridge system with software stack.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ PERFORMANCE ═══════════════════ -->
+<section id="performance">
+  <div class="container">
+    <div class="section-label">08 — Performance</div>
+    <h2>Expected Results</h2>
+    <p class="section-subtitle">
+      Benchmarks from Phase 1 (llama.cpp) on the RX 580 8GB with wired Pi architecture.
+    </p>
+
+    <div style="margin-bottom: 48px;">
+      <div class="perf-row">
+        <div class="perf-label">GhostGPU (RX 580)</div>
+        <div class="perf-bar-track">
+          <div class="perf-bar-fill" style="width: 82%; background: linear-gradient(90deg, var(--accent-green), var(--accent-cyan));">18–28 tok/s</div>
+        </div>
+      </div>
+      <div class="perf-row">
+        <div class="perf-label">CPU Only (i7 laptop)</div>
+        <div class="perf-bar-track">
+          <div class="perf-bar-fill" style="width: 12%; background: var(--accent-red);">2–4 tok/s</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-grid" style="grid-template-columns: 1fr 1fr;">
+      <div class="card">
+        <h3 style="color: var(--accent-green);">✓ Best Workloads</h3>
+        <p>LLM inference (Mistral, LLaMA, etc.) · Image generation (Stable Diffusion) · ML training on small–medium datasets · Batch compute and data processing</p>
+      </div>
+      <div class="card">
+        <h3 style="color: var(--accent-red);">✗ Not Recommended</h3>
+        <p>Real-time gaming (latency too high) · Live video encoding · Latency-critical applications under 1ms · Large-scale distributed training</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ ROADMAP ═══════════════════════ -->
+<section id="roadmap">
+  <div class="container">
+    <div class="section-label">09 — Roadmap</div>
+    <h2>What's Next</h2>
+    <p class="section-subtitle">
+      GhostGPU is under active development. Here's where we're headed.
+    </p>
+
+    <div class="roadmap">
+      <div class="roadmap-item near">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-time">Near-term</div>
+        <div class="roadmap-title">Phase 1 Proof of Concept</div>
+        <div class="roadmap-desc">Complete Phase 1 validation with Pi 5 + OCuLink + RX 580. Confirm llama.cpp performance benchmarks. Publish setup guide and build documentation.</div>
+      </div>
+      <div class="roadmap-item mid">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-time">Mid-term</div>
+        <div class="roadmap-title">Phase 2 Remote Execution</div>
+        <div class="roadmap-desc">PyTorch remote execution via FastAPI. systemd auto-start for unattended operation. Multi-model support and model hot-swapping.</div>
+      </div>
+      <div class="roadmap-item far">
+        <div class="roadmap-dot"></div>
+        <div class="roadmap-time">Long-term</div>
+        <div class="roadmap-title">Product &amp; Ecosystem</div>
+        <div class="roadmap-desc">Phase 3 Vulkan fallback. Pre-built hardware kits. SaaS management dashboard. Multi-GPU cluster support. Alternative GPU testing (Intel Arc, newer AMD).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ GETTING STARTED ═══════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">10 — Quick Start</div>
+    <h2>Getting Started</h2>
+    <p class="section-subtitle">
+      From zero to running LLM inference on your own GPU — in 7 steps.
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h4>Acquire Hardware</h4>
+          <p>Get everything from the bill of materials above. Used RX 580s are plentiful and cheap.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h4>Flash Pi OS</h4>
+          <p>Write <code>Raspberry Pi OS Lite (64-bit)</code> to your microSD card using the Pi Imager.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h4>Wire the Pi</h4>
+          <p>Connect Pi to your router via Ethernet. Attach RX 580 via uPCIty Lite HAT + OCuLink adapter.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-content">
+          <h4>Install ROCm 6.0.2</h4>
+          <p>Install the AMD GPU compute stack. Verify with <code>rocminfo | grep gfx803</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-content">
+          <h4>Build llama.cpp</h4>
+          <p>Clone and compile with <code>-DLLAMA_HIPBLAS=ON -DAMDGPU_TARGETS=gfx803</code>.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-content">
+          <h4>Download a Model</h4>
+          <p>Grab a GGUF model (e.g., Mistral 7B Q4) from Hugging Face and place it in the models directory.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-content">
+          <h4>Start &amp; Connect</h4>
+          <p>Run the server, then point your laptop browser to <code>http://&lt;pi-ip&gt;:8080</code> — done.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════ CONTRIBUTING ══════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">11 — Community</div>
+    <h2>Contributing</h2>
+    <p class="section-subtitle">
+      GhostGPU is open-source and welcomes contributions. Here are the areas where help is most needed:
+    </p>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-icon" style="background: #8b5cf618; color: var(--accent-purple);">🔧</div>
+        <h3>GPU Remoting Software</h3>
+        <p>Phase 3 Vulkan compute and full GPU API interception — the hardest unsolved piece of the project.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #3b82f618; color: var(--accent-blue);">🖥️</div>
+        <h3>Multi-GPU &amp; Alt Hardware</h3>
+        <p>Testing with Intel Arc, newer AMD GPUs, multi-GPU setups, and different Pi configurations.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon" style="background: #10b98118; color: var(--accent-green);">📖</div>
+        <h3>Docs &amp; Guides</h3>
+        <p>Improving setup documentation, writing tutorials, and creating video walkthroughs for the community.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ FOOTER ════════════════════════ -->
+<div class="watermark">GHOSTGPU · ORIGINAL CONCEPT BY LEO JOACHIM ATIENZA · 2026</div>
+<footer>
+  <div class="container">
+    <p style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px; background: var(--gradient-text); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">GhostGPU</p>
+    <p>Open-source wireless eGPU bridge · Built with Raspberry Pi + AMD RX 580</p>
+    <p style="margin-top: 12px; font-size: 0.78rem;">Your own private AI GPU. No cloud. No monthly fees.</p>
+    <p class="origin-mark">Original concept &amp; design by Leo Joachim Atienza</p>
+  </div>
+</footer>
+
+<!-- Hidden attribution in HTML comment for source-level proof -->
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║  GhostGPU — Wireless eGPU Bridge                       ║
+  ║  Original concept, architecture & design by Leo Joachim Atienza         ║
+  ║  Project initiated: 2026                                ║
+  ║  All original ideas and system design are the           ║
+  ║  intellectual property of the author.                   ║
+  ╚══════════════════════════════════════════════════════════╝
+-->
+
+</body>
+</html>

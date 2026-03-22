@@ -11,12 +11,14 @@
 [![GitHub Stars](https://img.shields.io/github/stars/Leo-Atienza/Ghost-GPU?style=social)](https://github.com/Leo-Atienza/Ghost-GPU/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Leo-Atienza/Ghost-GPU?style=social)](https://github.com/Leo-Atienza/Ghost-GPU/network/members)
 [![CI](https://github.com/Leo-Atienza/Ghost-GPU/actions/workflows/ci.yml/badge.svg)](https://github.com/Leo-Atienza/Ghost-GPU/actions/workflows/ci.yml)
-[![ROCm](https://img.shields.io/badge/ROCm-5.x-orange)](https://rocm.docs.amd.com/)
+[![ROCm](https://img.shields.io/badge/ROCm-6.0.2-orange)](https://rocm.docs.amd.com/)
 [![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi-5-red)](https://www.raspberrypi.com/)
 [![AMD RX 580](https://img.shields.io/badge/GPU-AMD%20RX%20580-blue)](https://www.amd.com/)
 
 > Route GPU compute from your laptop over Wi-Fi through a Raspberry Pi to an AMD RX 580.  
 > Your own private AI GPU. No cloud. No monthly fees.
+
+📄 [**View Full Project Page (HTML)**](https://leo-atienza.github.io/Ghost-GPU/) · 📥 [**Download Project Document (PDF)**](docs/project-page/GhostGPU_Project.pdf)
 
 </div>
 
