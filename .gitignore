@@ -1,0 +1,75 @@
+# GhostGPU .gitignore
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+*.out
+
+# Models (large binary files — store elsewhere)
+models/
+*.gguf
+*.bin
+*.safetensors
+*.ggml
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+.env
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Node.js (if any tooling added)
+node_modules/
+npm-debug.log*
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+llama.cpp/build/
+llama.cpp/CMakeFiles/
+llama.cpp/CMakeCache.txt
+llama.cpp/cmake_install.cmake
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.bak
+
+# Secrets / credentials
+.env.local
+.env.*.local
+*.pem
+*.key
+secrets/
+
+# ROCm generated
+*.hsaco
+*.amdgcn

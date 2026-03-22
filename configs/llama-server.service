@@ -1,0 +1,39 @@
+[Unit]
+Description=GhostGPU llama-server (llama.cpp OpenAI-compatible API)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/Ghost-GPU
+
+# Load ROCm environment
+EnvironmentFile=-/home/pi/Ghost-GPU/configs/rocm-env.sh
+Environment="ROCM_PATH=/opt/rocm"
+Environment="LD_LIBRARY_PATH=/opt/rocm/lib:/opt/rocm/hip/lib"
+Environment="HCC_AMDGPU_TARGET=gfx803"
+Environment="HSA_OVERRIDE_GFX_VERSION=9.0.0"
+Environment="ROCR_VISIBLE_DEVICES=0"
+
+# Adjust model path and layer count as needed
+ExecStart=/home/pi/Ghost-GPU/llama.cpp/build/bin/llama-server \
+    --model /home/pi/models/mistral-7b-instruct-v0.2.Q4_K_M.gguf \
+    --n-gpu-layers 35 \
+    --ctx-size 4096 \
+    --threads 4 \
+    --host 0.0.0.0 \
+    --port 8080
+
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=llama-server
+
+# Resource limits
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

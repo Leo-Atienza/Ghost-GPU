@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200" width="800" height="200">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d1117;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1a1f2e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e040fb;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#7c4dff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#40c4ff;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e040fb;stop-opacity:0.8" />
+      <stop offset="100%" style="stop-color:#40c4ff;stop-opacity:0.8" />
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="200" fill="url(#bgGrad)" rx="12"/>
+
+  <!-- Grid lines (subtle) -->
+  <line x1="0" y1="50" x2="800" y2="50" stroke="#ffffff08" stroke-width="1"/>
+  <line x1="0" y1="100" x2="800" y2="100" stroke="#ffffff08" stroke-width="1"/>
+  <line x1="0" y1="150" x2="800" y2="150" stroke="#ffffff08" stroke-width="1"/>
+  <line x1="200" y1="0" x2="200" y2="200" stroke="#ffffff08" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="200" stroke="#ffffff08" stroke-width="1"/>
+  <line x1="600" y1="0" x2="600" y2="200" stroke="#ffffff08" stroke-width="1"/>
+
+  <!-- Accent bar at top -->
+  <rect x="0" y="0" width="800" height="3" fill="url(#accentGrad)" rx="2"/>
+
+  <!-- Ghost icon (simple) -->
+  <text x="60" y="115" font-size="60" text-anchor="middle" filter="url(#glow)">👻</text>
+
+  <!-- Main title -->
+  <text x="400" y="85" font-family="'Segoe UI', Arial, sans-serif" font-size="48"
+        font-weight="900" text-anchor="middle" fill="url(#textGrad)" filter="url(#glow)">GhostGPU</text>
+
+  <!-- Subtitle -->
+  <text x="400" y="120" font-family="'Segoe UI', Arial, sans-serif" font-size="16"
+        text-anchor="middle" fill="#8b949e" letter-spacing="2">
+    Open-source wireless eGPU bridge
+  </text>
+
+  <!-- Tag line -->
+  <text x="400" y="155" font-family="'Segoe UI', Arial, sans-serif" font-size="13"
+        text-anchor="middle" fill="#6e7681" letter-spacing="1">
+    Raspberry Pi 5  ·  AMD RX 580  ·  ROCm  ·  llama.cpp  ·  No cloud. No fees.
+  </text>
+
+  <!-- Accent bar at bottom -->
+  <rect x="0" y="197" width="800" height="3" fill="url(#accentGrad)" rx="2"/>
+</svg>
