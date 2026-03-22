@@ -17,6 +17,7 @@ if [ ! -f /etc/os-release ]; then
     echo "ERROR: Cannot detect OS. Is this Raspberry Pi OS?" >&2
     exit 1
 fi
+# shellcheck source=/dev/null
 . /etc/os-release
 echo "Detected OS: $PRETTY_NAME"
 
@@ -53,9 +54,11 @@ fi
 if grep -q "dtparam=pcie=on" "$CONFIG_FILE"; then
     echo "PCIe already enabled in $CONFIG_FILE"
 else
-    echo "" >> "$CONFIG_FILE"
-    echo "# GhostGPU: Enable PCIe interface" >> "$CONFIG_FILE"
-    echo "dtparam=pcie=on" >> "$CONFIG_FILE"
+    {
+        echo ""
+        echo "# GhostGPU: Enable PCIe interface"
+        echo "dtparam=pcie=on"
+    } >> "$CONFIG_FILE"
     echo "PCIe enabled in $CONFIG_FILE"
 fi
 
@@ -78,9 +81,11 @@ echo "--- Step 5: Configure GPU memory (disable Pi GPU blob) ---"
 if grep -q "gpu_mem=16" "$CONFIG_FILE"; then
     echo "GPU memory already configured"
 else
-    echo "" >> "$CONFIG_FILE"
-    echo "# GhostGPU: Minimize VideoCore GPU memory (we use the RX 580)" >> "$CONFIG_FILE"
-    echo "gpu_mem=16" >> "$CONFIG_FILE"
+    {
+        echo ""
+        echo "# GhostGPU: Minimize VideoCore GPU memory (we use the RX 580)"
+        echo "gpu_mem=16"
+    } >> "$CONFIG_FILE"
     echo "GPU memory set to 16 MB"
 fi
 
