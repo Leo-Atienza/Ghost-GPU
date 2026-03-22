@@ -16,6 +16,7 @@ fi
 if [ ! -d "${ROCM_PATH}" ]; then
     echo "ERROR: ROCm not found at ${ROCM_PATH}" >&2
     echo "Run sudo ./scripts/install-rocm.sh first." >&2
+    # shellcheck disable=SC2317
     return 1 2>/dev/null || exit 1
 fi
 
