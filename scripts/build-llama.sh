@@ -15,7 +15,7 @@ echo ""
 
 # Load ROCm environment if available
 if [ -f "configs/rocm-env.sh" ]; then
-    # shellcheck source=configs/rocm-env.sh
+    # shellcheck source=/dev/null
     source configs/rocm-env.sh
 elif [ -d "$ROCM_PATH" ]; then
     export PATH="${ROCM_PATH}/bin:${PATH}"

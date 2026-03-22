@@ -26,7 +26,7 @@ check() {
 
 # Load ROCm environment
 if [ -f "configs/rocm-env.sh" ]; then
-    # shellcheck source=configs/rocm-env.sh
+    # shellcheck source=/dev/null
     source configs/rocm-env.sh
 elif [ -d "/opt/rocm" ]; then
     export PATH="/opt/rocm/bin:${PATH}"
