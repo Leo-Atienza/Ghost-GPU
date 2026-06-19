@@ -16,6 +16,12 @@ Thumbs.db
 *.swo
 *~
 
+# Claude Code local preview helper (not part of the site)
+.claude/
+
+# Vercel
+.vercel/
+
 # Logs
 *.log
 logs/
